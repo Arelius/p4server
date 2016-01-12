@@ -1,0 +1,345 @@
+	            Helix Cluster Changes Notes
+	                    Version 2015.2
+
+Introduction
+---------------
+
+This document lists all user-visible changes to the Helix Cluster
+platform. Server clustering offers a multi-node solution for
+high availability and horizontal data center scaling. The software
+implementation of Helix Cluster includes the following  
+components: 
+
+	p4cmgr:     provides cluster deployment and management 
+	                  functionality
+	p4d:           provides journal replication, and master and
+	                  standby node functionalities 
+	p4zk:         a process forked  from the p4d/p4broker that assures 
+	                  a life-line connection to the Zookeeper service
+	p4broker:   provides Cluster router functionality 
+	Zookeeper: a 3rd party service that provides event
+	                  notification for automatic failover
+
+Updates to each component not specific to clustering can be found in
+the release notes for the products in question. 
+
+For a detailed discussion of each component see:
+http://www.perforce.com/perforce/doc.current/manuals/p4cmgr/
+
+Routing with p4broker component
+
+In routing mode a p4broker will keep a local cache of the mapping of
+client to server location.  This functionality is used to direct
+requests from clients that are distributed across a group of edge 
+or workspace servers (the latter being in a Helix Cluster).
+
+
+--------------------------------------------------------------------------
+
+Supported Platforms
+
+	* Ubuntu 12.04 LTS
+	* CentOS 6 (6.4 or later)
+	* RedHat 6 (6.5 or later)
+
+--------------------------------------------------------------------------
+
+Important security note
+    This release links OpenSSL version 1.0.1p. The OpenSSL 1.0.1p
+    version addresses the following vulnerability:
+    * CVE-2015-1793
+
+--------------------------------------------------------------------------
+
+Important export note
+
+	This product is subject to U.S. export control laws and regulations
+	including, but not limited to, the U.S. Export Administration
+	Regulations, the International Traffic in Arms Regulation requirements,
+	and all applicable end-use, end-user and destination restrictions.
+	Licensee shall not permit, directly or indirectly, use of any Perforce
+	technology in or by any U.S. embargoed country or otherwise in
+	violation of any U.S. export control laws and regulations.
+
+--------------------------------------------------------------------------
+
+Notation
+	   See the following marks in the notes below:
+
+	   svr -- change added to p4d component
+	   bkr -- change added to p4broker component
+	   zkp -- change added to p4zk component
+	   mgr -- change added to p4cmgr component
+
+	Perforce numbers releases YYYY.R/CCCCC, e.g. 2015.1/993924.
+	YYYY is the year; R is the release of that year; CCCCC is the
+	bugfix change level.  Each bugfix in these release notes is
+	marked by its change number.  Any build includes (1) all bugfixes
+	of all previous releases and (2) all bugfixes of the current
+	release up to the bugfix change level.
+
+--------------------------------------------------------------------------
+Important note:
+
+	Please refer to:
+	http://www.perforce.com/perforce/r15.1/user/clusterchgs.txt
+	http://www.perforce.com/perforce/r14.2/user/p4cmgr_relnotes.txt
+	http://www.perforce.com/perforce/r15.1/user/p4brokernotes.txt
+	http://www.perforce.com/perforce/r15.1/user/p4zknotes.txt
+	http://www.perforce.com/perforce/r15.1/user/relnotes.txt
+
+
+	to get up-to-date GA and post-GA information about this release.
+--------------------------------------------------------------------------
+
+Features in 2015.2
+    #1216733,#1230546 svr
+	Added support through the server specification to surface 
+	hxca servers, zookeeper servers and the clusterId in the 
+	server spec metadata.
+	    New Server Types:
+	  * identifier
+	  * admin
+	New Server Service Set Names:
+	  * for type identifier: cluster
+	  * for type admin: hxca-server
+	  * for type admin: zookeeper-server
+
+    #998431 svr
+	Workspace backup: on workspace-servers a new background
+	process runs that periodically backs up all loaded local
+	clients.  The backup interval is set via a configurable 
+	client.backup.interval specified in seconds.  By default 
+	this configurable is set to zero which turns off the 
+	feature.  When the backup interval is enabled
+	administrators can also specify an idle.unload.interval
+	also  specified in seconds. When enabled, the backup process 
+	will unload client workspaces if they have not been used for
+	the previous idle.unload.interval seconds.  By default, 
+	idle.unload.interval is zero, which disables automatic unload. 
+
+    #1068319 svr
+	Opt out of client backup: users may indicate via their
+	client specification that they do not wish their client
+	to be backed up. The new field "Backup:" defaults to
+	"enable" if not specified. If this field is set to "disable"
+	then that client workspace will neither be backed up 
+	nor be considdered for auto-unload.
+
+    #1066749 svr
+	A new variant of the p4 cluster command has been
+	added to manually transition a depot-standby server over
+	to be a workspace-server:'p4 cluster to-workspace'.
+	This is the first step in a two step process to replace a 
+	failed workspace server, which will be orchestrated via the
+	cluster manager.
+
+    #1066749 svr 
+	A new variant of the p4 cluster command has been
+	added to load previously loaded clients of another 
+	workspace server into the workspace server at which this
+	command is invoked : 'p4 cluster workspace-restore 
+	<old-server.id>'.  This command loads the backup files for 
+	a subset of clients from the former workspace server into 
+	the server on which this command is invoked. A client's 
+	backup will be loaded unless it has been marked "unloaded"
+	or "read-only". The client metadata will updated to indicate 
+	ownership by the new workspace server. During workspace restore 
+	there is no verification that the former workspace server is 
+	unavailable, however if the former workspace server is online 
+	it will receive updates remapping its clients to the new 
+	workspace server. This is the second step in a two step process 
+	to replace a failed workspace server, which will be orchestrated
+	via the cluster manager.
+
+    #1207879 bkr
+	Router will alert a user if client moves. If a router has an 
+	entry in its client cache for a workspace-server that does not 
+	respond, it will now query the depot-master to discover if
+	the client has moved.  If the client has moved then the router
+	will refresh its cache with the new location and reply back
+	to the requestor that the client has moved and that it might
+	be advisable to run "p4 status" to determine if the workspace
+	information is up to date with the current client view.  If
+	the user runs p4 status and receives results indicating that
+	the workspace information is not up to date, then the user
+	should run p4 reconcile to resolve the inconsistency.
+
+    #1130470, 1143127 svr
+	There is now a new tunable "server.global.views" which controls
+	whether or not the view maps of a non-stream client on an edge or
+	workspace server are made global when a client is modified.  By
+	default server.global.views=0 and so client view maps are never
+	made global, matching the pre-2015.2 behavior.
+
+    #1212576 svr
+	Added periodic logging to indicate that the server is waiting
+	for p4zk to establish a connection to the zookeeper servers.
+
+Bugs fixed in 2015.2
+
+    #1210508 (Bug #078158) svr, bkr
+	If a cluster server or router is unable to connect its p4zk 
+	at startup it will now stop with a fatal error stating that it 
+	"Cannot connect to p4zk.”
+
+Features in 2015.1
+
+    #986306 mgr
+	Nodes can have multiple routers and the port is no longer set at 1666.
+	When a router is added the next available port starting from 1666 is
+	selected unless the port is specified in the add command.
+
+	A port can be specified when adding a router to a node using '--port'.
+	If a specified port is in use an error be displayed.
+
+    #839759 mgr 
+	Multiple standby servers are supported. This was possible in the
+	2014.2 release but untested and unsupported. A second or subsequent
+	standby server can be added with a 'p4cmgr add depot' command.
+
+    #977909 mgr
+	Import from checkpoints is now supported using the journal import tool.
+	This requires that the perforce-jnltool is used to split a checkpoint
+	into multiple files. When these files are placed into the /p4/archives
+	shared directory, then they can be automatically picked
+	up by workspaces.  Each checkpoint file should be named based on
+	the server id of the workspace.
+
+    #993924 (Bug #77009) mgr 
+	Repositories can be located on the local machine, removing the need
+	for the cluster to have access to the public repository at
+	package.perforce.com. This allows administrators to retain full 
+	control over which versions of packages are installed.
+
+
+Bug Fixes in 2015.1
+
+    #979648 (Bug #76627) svr 
+	Authentication failure occurs attempting to use P4V or
+	P4VS clients -> swarm integration in a DCS configuration.
+	Added cluster id to p4 info output if the replying server is a
+	member of a cluster.
+
+    #971788 bkr
+	When a router looks up a server id but no matching altserver
+	is found, no route will be recorded, an error will be logged
+	in the broker log, and the command will be attempted following
+	default routing rules.
+
+    #962556 (Bug #75947) svr 
+	Cluster members don't see failover if they are down at the time.
+	Added a P4TARGET verification phase during server startup
+	to assure that servers are updated with the latest
+	failover changes if they occured when the server was down.
+
+Features in 2014.2
+
+    #839759 (Bug #3872) svr 
+	Given a data center containing multiple roughly identical Linux
+	machines connected by an enterprise-grade LAN and sharing equal
+	access to the same enterprise-grade storage server, Perforce can
+	be deployed to those machines such that:
+
+	    - The overall Perforce installation appears to end-users and
+	      their applications as a single Perforce server.
+
+	    - As servers are added to the installation, it can horizontally
+	      scale as the number of Perforce users increases.
+
+	    - The installation can withstand the loss of the master server
+	      without the need for immediate manual intervention, and
+	      without causing extended downtime; the installation will
+	      automatically fail over to a standby server and continue service.
+
+	To deploy automatic failover support in your Perforce installation,
+	you will need to include several new components in addition to
+	the p4d and p4broker components:
+
+	    - The p4zk process provides cluster coordination services.
+
+	    - The p4cmgr toolset provides DevOps support for installation,
+	      deployment, configuration, monitoring, and administration.
+
+	The p4cmgr toolset will be available in November.
+
+    #906143 svr 
+	When p4cmgr creates a standby node it initially runs some
+	configuration commands; these commands produce a journal.
+	This setup journal is independent of the cluster-wide journal
+	and it is never replicated.  After setup we rename this journal
+	to a name like "journal.2014-10-28T12:47:41.0.bak"; it uses an
+	ISO 8601 timestamp to provide a unique name and appends ".bak"
+	to indicate that these journal records are of purely historical
+	interest.  You may examine this journal file if you wish or you
+	may delete it; the cluster software never uses it.
+
+    #933122 bkr 
+	The "destination" statement now allows "destination target;",
+	which sets the destination to the current "target" value.
+	This is useful in a DCS configuration, because DCS may re-write
+	the "target" value when appropriate.
+
+    #972869 mgr
+	A new empty cluster can be created and configured automatically.
+
+    #972869 mgr 
+	Services can be added to and removed from the cluster after it has been
+	created.
+
+    #972869 mgr
+	A cluster can be stopped and started with a single command that ensures
+	that it is kept in a consistent state.
+
+    #972869 mgr 
+	We support a standard cluster configuration, which consists of exactly
+	two depot servers, one or more workspace servers and a router. This
+	provides fail over for the depot server and scalability for the
+	workspace servers.
+
+    #972869 mgr 
+	We support a workspaceless cluster configuration, which consists of two
+	or more depot server, no workspace servers and one or more routers. This
+	provides scalability for the depot servers.
+
+Bugs fixed 2014.2 
+
+    #999214 (Bug #77223) svr
+	Replication threads (pull or journalcopy) using "long poll"
+	(-i 0) could sometimes report a failure to open the wrong
+	journal file.
+
+    #979987 (Bug #76552) svr
+	Standby or edge-servers targeting a standby server did not
+	replicate correctly.
+	
+    #979881 (Bug #76552) svr
+	Standby or edge-servers targeting a standby server did not
+	replicate correctly.
+
+    #976918 (Bug #76553) svr
+	'p4 servers -J' against a non-depot standby server reported 0
+	for the current journal offset rather than the current journal
+	size. 
+
+    #944004 (Bug #74754) bkr 
+	Now we allow the Zookeeper servers to lag behind the boot 
+	of the rest of the cluster routers (p4brokers). The default
+	timeout is 5 minutes but it can be changed via an optional 
+	zk.connect.timeout entry in the router block of the broker 
+	configuration file. Although numeric, the value can be
+	expressed as a quoted string. e.g.
+	    zk.connect.timeout = "150";
+
+    #935793 (Bug #74137) svr 
+	Added master generation number check so that an old master
+	will not be able to join a cluster after it has failed
+	over to a new master.  This change requires that any existing
+	users of 2014.2 prior to PATCH 2 of the Perforce cluster 
+	feature must remove their Zookeeper data cache on each server.
+	    * stop the cluster
+	    * stop zookeepers
+	    * remove the existing data caches (see zoo.cfg for
+	      location)
+	    * restart zookeepers
+	    * restart cluster

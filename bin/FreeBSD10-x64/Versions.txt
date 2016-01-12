@@ -1,0 +1,33 @@
+Perforce - The Fast Software Configuration Management System.
+Copyright 1995-2015 Perforce Software.  All rights reserved.
+This product includes software developed by the OpenSSL Project
+for use in the OpenSSL Toolkit (http://www.openssl.org/)
+See 'p4 help legal' for full OpenSSL license information
+Version of OpenSSL Libraries: OpenSSL 1.0.1q 3 Dec 2015
+Rev. P4/FREEBSD100X86_64/2015.2/1319959 (2015/12/28).
+
+Perforce - The Fast Software Configuration Management System.
+Copyright 1995-2015 Perforce Software.  All rights reserved.
+This product includes software developed by the OpenSSL Project
+for use in the OpenSSL Toolkit (http://www.openssl.org/)
+See 'p4 help legal' for full OpenSSL license information
+Version of OpenSSL Libraries: OpenSSL 1.0.1q 3 Dec 2015
+Rev. P4BROKER/FREEBSD100X86_64/2015.2/1319959 (2015/12/28).
+
+Perforce - The Fast Software Configuration Management System.
+Copyright 1995-2015 Perforce Software.  All rights reserved.
+This product includes software developed by the OpenSSL Project
+for use in the OpenSSL Toolkit (http://www.openssl.org/)
+See 'p4 help legal' for full OpenSSL license information
+Version of OpenSSL Libraries: OpenSSL 1.0.1q 3 Dec 2015
+Rev. P4D/FREEBSD100X86_64/2015.2/1319959 (2015/12/28).
+License: none
+
+Perforce - The Fast Software Configuration Management System.
+Copyright 1995-2015 Perforce Software.  All rights reserved.
+This product includes software developed by the OpenSSL Project
+for use in the OpenSSL Toolkit (http://www.openssl.org/)
+See 'p4 help legal' for full OpenSSL license information
+Version of OpenSSL Libraries: OpenSSL 1.0.1q 3 Dec 2015
+Rev. P4P/FREEBSD100X86_64/2015.2/1319959 (2015/12/28).
+

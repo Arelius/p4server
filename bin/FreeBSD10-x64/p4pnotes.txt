@@ -1,0 +1,839 @@
+                             Release Notes for 
+                          P4P, the Helix Proxy
+                              Version 2015.2
+
+Introduction
+
+	P4P, the Helix Proxy, improves Helix performance in WAN 
+	topographies by mediating between Helix clients and servers
+	to cache frequently transmitted file revisions.  By intercepting
+	requests for cached file revisions, P4P reduces demand on the 
+	Helix Versioning Engine(P4D).
+
+	To improve the performance obtained by Helix clients
+	that access a central Helix Versioning Engine across a WAN, set
+	up P4P on the network close to the clients and configure the
+	clients to access P4P, then configure P4P to access the
+	p4d. With this configuration, file revisions are sent once
+	from the central server and cached by the proxy.  Subsequent
+	requests for the same revisions are delivered from the proxy,
+	reducing both network traffic across the WAN and CPU load on
+	the central server. On a LAN, you can obtain performance
+	improvements by setting up several proxies to divert the workload
+	from the server's CPU and disks.
+
+	Unless stated otherwise you can intermix any release Helix 
+	client with any release p4d, but any functionality
+	new to 2013.2 requires you to upgrade the client, the proxy
+	and/or the server. The Proxy requires a server upgrade to
+	2002.2.  You might see improved proxy performance if you
+	upgrade your server to 2006.2
+
+	Additional information is available in the Helix Versioning
+	Engine System Administrator's Guide, available from the
+	Perforce Web site.
+
+	System Requirements
+
+	* p4d: 2002.2 or higher
+	* Helix clients: any version, any client program
+	* OS requirements: sufficient disk space for storing file revisions
+	  (P4P does not store server metadata)
+
+
+	Starting P4P
+
+	To start P4P, you invoke the p4p executable.  For example,
+	the following command line starts a proxy that communicates
+	with a central Helix Versioning Engine located on a host named
+	'centralserver', listening on port 1666. Helix clients
+	connect to P4P on port 1666 on the machine where the proxy
+	runs.  P4P file revisions will be stored under a directory
+	named /local/proxyroot.
+
+        p4p -p 1666 -t centralserver:1666 -r /local/proxyroot
+
+	The following command-line flags are supported.
+
+	* Proxy-specific options
+
+	-c              Do not compress files transmitted from the
+	                Helix Versioning Engine to P4P
+	-d              Run as a daemon (fork first, then run)
+	-f              Run as single-threaded server
+	-i              Run for inetd (socket on stdin/stdout)
+	-q              Suppress startup messages
+	-s              Run as an NT service (or invoke as p4ps)
+	-e size		Only cache files larger than size bytes
+			(default $P4PFSIZE or zero)
+
+	* General options
+
+	-h or -?        Display this message
+	-L log          File to which messages are logged
+	                (default $P4LOG, or stderr if $P4LOG is not set)
+	-p port         Port on which P4P accepts Helix client requests 
+	                (default $P4PORT or 1666 if $P4PORT is not set)
+	-r root         Proxy cache directory (default $P4PCACHE or directory
+	                where p4p is started if $P4PCACHE is not set)
+	-t port         Port that P4P uses to connect to a server
+			(default $P4TARGET or perforce:1666 if
+			$P4PORT is not set)
+	-v level        Specifies debug mode (see Helix Versioning 
+			Engine System Administrator's guide for
+			details; default $P4DEBUG or none if $P4DEBUG
+			is not set)
+	-V              Display the version of the Helix proxy
+
+
+	Administering P4P
+
+	* No backups required
+
+	  You do not need to back up the P4P cache directory.
+	  If necessary, P4P reconstructs it based on Helix 
+	  Versioning Engine metadata.
+
+	* Loading the cache directory to obtain best initial performance
+
+	  P4P stores file revisions only when one of its clients
+	  requests them.  File revisions are not "prefetched." Note
+	  that the performance gain that is provided by P4P only
+	  comes into effect after file revisions are cached.  After
+	  starting P4P, you can load the cache directory by creating
+	  a client and syncing it to the head revisions, enabling
+	  other clients that subsequently connect to immediately
+	  obtain the performance improvements provided by P4P.
+
+	* Managing disk space consumption
+
+	  P4P saves file revisions in its cache directory.  Note
+	  that P4P's disk space consumption only increases.  P4P
+	  does not delete its cache files or otherwise manage its
+	  consumption of disk space.  To recover disk space, remove
+	  files under the proxy's root.  It is safe to delete the
+	  proxy's cache files while the proxy is running.
+
+	* Protections
+
+	  The p4 protect command can distinguish connections coming
+	  from a proxy if the string 'proxy-' is prepended to the
+	  IP addresses of the true client and used in the protections
+	  table.  For example, 'proxy-*' applies to all connections
+	  from all proxies and 'proxy-10.0.0.5' identifies a host
+	  with an IP address of 10.0.0.5 and connecting to p4d
+	  through a proxy. This behavior is configurable; see
+	  'p4 help protect'.
+
+	* Remote Depots
+
+	  The proxy is designed to operate between a p4 client and
+	  a p4 server (p4d).  The proxy does not cache files between two 
+	  p4 servers in a remote depot configuration.  Prior to the 
+	  2006.2 release, as well as in the 2010.1 and 2010.2 releases,
+	  attempting to connect to a remote depot via a proxy would
+	  result in the proxy logging an error about this configuration
+	  (i.e. can not proxy for remote depots) and an error at the p4
+	  server about being unable to access the remote depot and an
+	  error at the p4 client. Beginning with the 2011.1 
+	  release of p4p, no server or client error is issued for this 
+	  configuration; still, a proxy configured as a remote depot 
+	  will not cache files and this performance implication should
+	  be carefully considered before deploying a proxy in such a case.
+
+Supported Platforms
+
+    Windows for 64-bit Itanium
+    Windows for Intel(ntx86,ntx64)
+    Linux kernel 2.6 for 64-bit Itanium
+    Linux kernel 2.6 for ARM
+    Linux kernel 2.6 for Intel (x86,x86_64)
+    FreeBSD 10.0 for Intel(x86, x86_64)
+    Apple Darwin 9.0 for Intel(x86,x86_64)
+
+--------------------------------------------------------------------------
+	The change history below indicates client/server/proxy requirements 
+	as follows:
+
+	   * -- requires new p4 client program
+	   ** -- requires new p4d server program
+	   *** -- requires new p4p proxy program
+
+Bugs fixed in 2015.2
+
+	#1239015 (Bug #80722) **
+	    A file which was integrated from a streams depot to a local
+	    depot, or vice versa, would be placed into the wrong location in
+	    the proxy cache if it was accessed via the proxy by a command
+	    such as 'p4 sync' or 'p4 print'. Note that the symptom of this
+	    bug is in the proxy cache, but the fix is in the server.
+
+	#1026707 (Bug #77504) ** *
+	    'p4 -Zproxyload sync --parallel=...' now correctly updates the
+	    proxy's archive cache without sending files to the client.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2015.1
+
+	#1239015 (Bug #80722) **
+	    A file which was integrated from a streams depot to a local
+	    depot, or vice versa, would be placed into the wrong location in
+	    the proxy cache if it was accessed via the proxy by a command
+	    such as 'p4 sync' or 'p4 print'. Note that the symptom of this
+	    bug is in the proxy cache, but the fix is in the server.
+
+	#1026707 (Bug #77504) ** *
+	    'p4 -Zproxyload sync --parallel=...' now correctly updates the
+	    proxy's archive cache without sending files to the client.
+
+	#849728 (Bug #72834) ***
+	    The proxy might crash when run against a server which had
+	    experienced p4d bug 72842.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2014.2
+
+	#1239015 (Bug #80722) **
+	    A file which was integrated from a streams depot to a local
+	    depot, or vice versa, would be placed into the wrong location in
+	    the proxy cache if it was accessed via the proxy by a command
+	    such as 'p4 sync' or 'p4 print'. Note that the symptom of this
+	    bug is in the proxy cache, but the fix is in the server.
+
+	#1026707 (Bug #77504) ** *
+	    'p4 -Zproxyload sync --parallel=...' now correctly updates the
+	    proxy's archive cache without sending files to the client.
+
+	#926940 (Bug #74435) **
+	    Operations transferring many files via a proxy with most
+	    transfers not cached by the proxy could hang.  Most likely
+	    to happen with a broker between the proxy and a server.
+	    Fixed.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2014.1
+
+	#1239015 (Bug #80722) **
+	    A file which was integrated from a streams depot to a local
+	    depot, or vice versa, would be placed into the wrong location in
+	    the proxy cache if it was accessed via the proxy by a command
+	    such as 'p4 sync' or 'p4 print'. Note that the symptom of this
+	    bug is in the proxy cache, but the fix is in the server.
+
+	#1026707 (Bug #77504) ** *
+	    'p4 -Zproxyload sync --parallel=...' now correctly updates the
+	    proxy's archive cache without sending files to the client.
+
+	#765126 (Bug #69975) **
+	    The dm.proxy.protects configurable may be used to control the
+	    behavior described under "Protections:" above. For more
+	    information, please see 'p4 help protect'.
+
+	#699932 (Bug #19001) ***
+	    When binary format files are added to the proxy archive,
+	    their modification time and access time were both set to
+	    the submit time of when that file revision was added to the
+	    server.  This would cause problems for scripts which remove
+	    archive files which have old access times.  Now the access
+	    time is set to the current time even when the modification
+	    time is set in the long past.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2013.3
+
+	#1239015 (Bug #80722) **
+	    A file which was integrated from a streams depot to a local
+	    depot, or vice versa, would be placed into the wrong location in
+	    the proxy cache if it was accessed via the proxy by a command
+	    such as 'p4 sync' or 'p4 print'. Note that the symptom of this
+	    bug is in the proxy cache, but the fix is in the server.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+
+Bugs fixed in 2013.2
+
+	#1239015 (Bug #80722) **
+	    A file which was integrated from a streams depot to a local
+	    depot, or vice versa, would be placed into the wrong location in
+	    the proxy cache if it was accessed via the proxy by a command
+	    such as 'p4 sync' or 'p4 print'. Note that the symptom of this
+	    bug is in the proxy cache, but the fix is in the server.
+
+        #680865 (Bug #67203) **
+	    P4TRUST value was not honored for Windows Service settings
+	    ie. p4 set -S <service>  Fixed.
+
+	#671142 (Bug #53464) **
+	    A change to the server's handling of proxied file delivery
+	    requests may improve performance over long haul networks. See the
+	    server release notes for details on this change.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New Functionality in 2013.1
+
+	#544843 (Bug #55135) ***
+	    The cache file name folding behavior introduced in change 288884
+	    is now configurable, by specifying -vlbr.proxy.case when starting
+	    the proxy. See 'p4p -h' for more information.
+
+	#544038 (Bugs #22019, #60001) ***
+	    Two new tunables enable simple monitoring of proxy activity.
+	    Specifying -vproxy.monitor.level=N when starting the proxy
+	    enables the new monitoring functionality. If N=1, file transfer
+	    activity is monitored; if N=2, all proxy activity is monitored;
+	    if N=3, additional statistics are gathered during monitoring.
+	    Run 'p4p -m' to display the current monitor data. Monitor data
+	    is stored in the pdb.monitor table, which can be safely removed
+	    during any proxy restart and need not be backed up. The
+	    proxy.monitor.interval=N flag may also be specified to control
+	    the frequency of monitor updates; the default interval is
+	    10 seconds.
+
+Bugs fixed in 2013.1
+
+	#521622 (Bug #55320) * ** ***
+	    The server and proxy no longer support the Zeroconf server
+	    registration protocol. The P4ZEROCONF environment variable is no
+	    longer implemented, and the 'p4 browse' command has been removed.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New Functionality in 2012.2
+
+	#384600 (Bug #47573) ***
+	    The proxy now limits the number of faults that a single 'p4 sync'
+	    will take sole responsibility for. The default amount is 100MB;
+	    the value may be adjusted via the -vnet.maxfaultpub=N flag.
+
+Bugs fixed in 2012.2
+
+	#558205 (Bug #61814) ***
+	    Fixed file handle leak introduced by change 541823.
+
+	#541823 (Bug #59900) ***
+	    'p4 print' could return the wrong file contents if two distinct
+	    files had file or directory names that differed only in case, and
+	    if the proxy at that instant had the other file's contents in its
+	    cache.
+
+	#512507 (Bug #58922) ***
+	    A proxy run via inetd will no longer remove pdb.lbr at every
+	    new connection.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New Functionality in 2012.1
+
+	#372184,#373711 (Bugs #2493, #9875) *** ** *
+	    P4PORT settings may now include the 'ssl:' prefix. In addition,
+	    the existing but undocumented 'tcp:' prefix is now fully documented
+	    and supported; it can be useful for cases where you desire to
+	    explicitly indicate that the connection is cleartext.
+	    The 'ssl:' prefix may be specified in P4PORT values to cause
+	    the client and server to use SSL encryption of network traffic.
+	    If this prefix is used, it must be used in both server and
+	    and client. An SSL-enabled server will only accept connections
+	    from SSL-enabled clients, and a server which does not specify the
+	    ssl: prefix will not accept connections from clients that do.
+
+	#370110 ***
+	    'p4 info' and 'p4 proxy' now display more information.
+	    The proxy address is displayed by both commands and the
+	    tagged version of 'p4 info' will give the proxy cache root.
+
+Bugs fixed in 2012.1
+
+	#411896 (Bug #51847) ***
+	    A Windows proxy no longer hangs when tracing is enabled.
+
+	#321281 (Bug #33612) ***
+	    Submitting a file of type +X via the proxy no longer crashes
+	    the proxy.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New Functionality in 2011.1
+
+	#376563 ***
+	    'p4p -l [-s]' can be used to display the current status of file
+	    content transfers in the proxy.
+
+	#279059 (Bug #39267) ***
+	    New command "p4 proxy" reports information on the proxy
+	    without connecting through to a p4d server.
+
+Bugs fixed in 2011.1
+
+	#361733 (Bugs #28927, #48676) ***
+	    Change 236984 is undone, and it is once again possible to deploy
+	    a proxy as the target of a remote depot. However, the proxy is
+	    still not caching files requested via such a remote depot, and
+	    hence there is no performance benefit, and in fact a certain
+	    performance penalty, to deploying a proxy for this purpose only.
+
+	#336791 (Bugs #44654, #46470) ***
+	    Some proxy messages were appearing on stderr instead of being
+	    redirected to the -L log file argument.
+
+        #288884 (Bugs #21533, #29921) ***
+	    The proxy will now case fold cached files if the server is
+	    case folding.  Unicode mode will also fold non-ascii characters.
+
+	#281335 (Bug #28310) ***
+	    When the proxy's connection to the server is broken, the proxy
+	    will now log a message in its log and deliver the I/O error
+	    message to the client.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New Functionality in 2010.2
+
+	#239060 (Bugs #11516,#23880,#22720) ***
+	    Concurrent sync operations from the server no longer
+	    cause multiple file transfers.  Proxy now has a database
+	    table "pdb.lbr" which it uses to determine if some
+	    proxy instance is in process of transferring a file allowing
+	    proxy instances to delay or wait for the other proxy to
+	    finish its transfer.  When the proxy is restarted it will
+	    automatically delete the "pdb.lbr" table during startup.
+
+
+Bugs fixed in 2010.2
+
+	#376090 (Bug #42661) ***
+	    "p4 -Zproxyverbose " will now report if the proxy
+	    cache was used to satisfy the command.
+
+	#369868 (Bug #28250) ***
+	    'p4 -s print' commands issued via the proxy unnecessarily split
+	    some lines of the file into separate "text:" tags.
+
+	#334665 (Bug #47133) ***
+	    An invalid reference to an already-freed block of memory could
+	    occur if a concurrent sync completed prior to the receipt of the
+	    acknowledgement message from the server.
+
+	#328270 (Bug #46527) ***
+	    Using the proxy on a platform with a much smaller network buffer
+	    size than the server no longer requires use of the rpc.himark
+	    tunable on the server; the proxy now adjusts its himark value
+	    automatically to the minimum of its buffer size and the server's.
+
+	#292172 (Bug #43797) ***
+	#293382 (Bug #44092) ***
+	    In rare cases a Windows virus scanner may block access to the
+	    logfile for extended periods of time and cause an exit or crash.
+	    This has been corrected.
+
+	#264311 (Bug #40481) ***
+	    Proxy on Windows crashed on bad file date time values.
+	    Change should prevent a crash and log an error for bad
+	    file times.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New Functionality in 2010.1
+
+	#233985 (Bug #26257) ***
+	    Proxy debug information (enabled with the -v flag) will now
+	    be sent to the log file as specified with the -L flag.  If
+	    -L is not given then debug information will go to stdout.
+	    There are some cases where debug information will still go
+	    to stdout such as before that -L flag is processed or
+	    after that log file is closed.
+
+
+Bugs fixed in 2010.1
+
+	#375535 (Bug #46527) ***
+	    Using the proxy on a platform with a much smaller network buffer
+	    size than the server no longer requires use of the rpc.himark
+	    tunable on the server; the proxy now adjusts its himark value
+	    automatically to the minimum of its buffer size and the server's.
+
+	#237300 (Bug #37599) ***
+	    Files modtime of zero (which does not normally happen but
+	    may due to other bugs) were not properly cached and would
+	    cause strange flush2 error messages.  Fixed.
+
+	#236984 (Bug #28917) ***
+	    The proxy should have not allowed it to be used in remote
+	    depot connections.  The proxy used to error but a change in
+	    the server prevented the proxy from detecting this case.
+	    The proxy never effectively cached remote depot file operations.
+	    This error has been restored.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2009.2
+
+	#251893 (Bug #39401) ***
+	    If the proxy is connecting to a p4 broker over a wide area
+	    network instead of a server, performance could be very poor.
+	    Fixed.
+
+        #217455 (Bug #35714) **
+	    'p4 submit' of a ktext file through a proxy when the ktext
+	    file was integrated from another file which is not in the
+	    proxy's cache would cause the refresh of submitted keyword
+	    expanded files to fail with an Illegal operation error.
+	    The submit would succeed but a subsequent sync would be
+	    needed to update keyword expanded files.  Fixed.
+
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2009.1
+
+        #218882 (Bug #35881) ***
+	    If the client disconnects during a file transfer the
+	    proxy would sometimes wrongly cache fault of that
+	    file and some later files to the p4d server even
+	    when the client is no longer connected to the proxy.
+	    These cache faults would not be needed and waste
+	    server capacity.  Fixed.
+
+	#208563 (Bug #34735) ***
+	    On some platforms the proxy would fail to update its
+	    cache with errors of "no such file".  Fixed.
+
+	#204859 (Bug #33995) ***
+	    If a cache update failed to create a file the proxy
+	    would terminate early cancelling the command in progress.
+	    Fixed and error is logged in proxy log.
+
+	#183215 (Bug #32114) ***
+	    If a client connected to the proxy disconnects due to
+	    a ctrl-c or lost network connection, the proxy can
+	    now detect when the server is in a long compute
+	    phase and the proxy will drop the server connection.
+	    This should prevent server processes from consuming
+	    system resources needlessly when the client has
+	    disconnected.
+
+	#182912 (Bug #32078) ***
+	    The options specified with the P4POPTIONS variable now have
+	    lower priority than command line options.  Also, now
+	    up to forty options may be specified in the P4POPTIONS
+	    variable.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Major new functionality in 2008.2
+
+	Support for Zeroconf (service registration and discovery) * ** ***
+	    See relnotes.txt for more information about the Zeroconf
+	    support that was added in this release.
+
+Bugs fixed in 2008.2
+
+	#217868 (Bug #35714) **
+	    'p4 submit' of a ktext file through a proxy when the ktext
+	    file was integrated from another file which is not in the
+	    proxy's cache would cause the refresh of submitted keyword
+	    expanded files to fail with an Illegal operation error.
+	    The submit would succeed but a subsequent sync would be
+	    needed to update keyword expanded files.  Fixed.
+
+	#187392 (Bug #32030) ***
+	    On Windows machines, simple system errors could cause the
+	    whole proxy process to crash.  Fixed.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Major new functionality in 2008.1
+
+	#149641 * ** ***
+	    TCP connections between Perforce processes; clients,
+	    proxies and servers, now discover network buffering levels
+	    and better use that buffer space.  Performance should be
+	    improved especially for long proxy to server connections.
+
+	#149297 (Bug #22108) *
+	    'p4 set' will now report on the P4POPTIONS variable.
+
+	#148921 (Bug #16398, #28490) ** ***
+	    Uncompress of binary files can be done on the client
+	    instead of the server when the proxy is in use.
+	    Both the new server and new proxy are required.
+
+Bugs fixed in 2008.1
+
+	#179182 (Bug #31775) **
+	    'p4 sync -p' via the proxy did not transfer files which
+	    were not in the proxy's cache.  Fixed.
+
+	#175236 (Bug #31596) **
+	    'p4 print' of binary files without the '-o' flag would be
+	    output as compressed and possibly output twice in a row.
+	    Fixed.
+
+	#152854 (Bug #28635) **
+	    The proxy was storing revisions which were lazy copied
+	    between different local depots in multiple locations.
+	    Fixed.
+
+	#148708 (Bug #28575) ***
+	    Compression from the server to the proxy would start
+	    late and potentially most of a command may be uncompressed.
+	    Now, compression will be enabled earlier.
+
+	#140557 (Bug #27131) ***
+	    Under rare conditions 'p4 -x <filelistfile> <command>'
+	    could hang if run through the proxy.  Among the requirements
+	    are many files (in the thousands), and a command which has
+	    heavy client interaction such as 'add' or 'diff -s?'.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Major new functionality in 2007.3
+
+	#130638 (Bug #10600) ***
+	    Proxy Load functionality.  Running the command:
+	    "p4 -Zproxyload sync" will update the proxy's
+	    archive cache without sending files to the
+	    client.  This is intended to be used via
+	    a dedicated client whose revision have list
+	    will indicate if proxy revisions might need
+	    to be updated.
+
+	#130380 (Bug #20634) ** ***
+	    Tagged output for 'p4 info' run through the
+	    proxy now shows the proxy version string.
+
+	#129045 (Bug #10866) ** ***
+	    Proxy will now cache files as they are submitted
+	    through the proxy.  A new cache validation system
+	    based on MD5 signatures is being used.  If a new
+	    proxy is working with an old server the old timestamp
+	    validation is used.  Recommend running "p4 verify" to
+	    assure that the p4d server has MD5 signatures computed
+	    as the proxy will not validate it's cache for revisions
+	    which the p4d server does not have an MD5 signature.
+
+Bugs fixed in 2007.3
+
+	#135086 (Bug #26223) ***
+	    The Windows version of the proxy could leak threads
+	    if two sessions wrote to the error log concurrently.
+	    Fixed.
+
+	#129045 (Bug #25274) **
+	    "p4 sync -p" run through the proxy would update
+	    the have list when the proxy needs to bring over
+	    a revision from the server.  Fixed.
+
+	#129045 (Bug #23408) ** ***
+	    The proxy can effectively cache files with a zero
+	    modtime.
+
+	#129045 (Bug #22802) ***
+	    "p4 -Zproxyverbose print" will now report if the proxy
+	    cache was used to satisfy the command.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Major new functionality in 2007.2
+
+	#119109 * ** ***
+	    Changes to better support the new utf16 filetype
+
+	#113338 ***
+	    Changes to network buffering which improve performance
+	    of many short commands.
+
+Bugs fixed in 2006.2
+
+	#112395 (Bug #23236) ***
+	    'p4 print' without the '-o' flag might fail with
+	    an internal error in some cases.  Fixed.
+
+	#104828 (Bug #20584) **
+	    'p4 resolve -at' after a 'p4 integ' between files
+	    where only one of the files has keyword expansion
+	    as part of its type caused problems because keyword
+	    expansion would be done based on the source file's
+	    type, but after submit, sync would expand keywords
+	    based on the target file's type leading to differences
+	    which would be reported with 'p4 diff -se'.  With this
+	    fix, in this case, 'p4 resolve -at' will expand keywords
+	    based on the target file's type.  The proxy was also
+	    caching the wrong keyword expansion which could appear
+	    in other clients later sync operations.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Major new functionality in 2006.1
+
+	#95339 (Bug #19759) ** ***
+	    p4 print without the -o option can constructively use the
+	    proxy's cache now.  For this to work both the server and the
+	    proxy must be upgraded.
+
+Bugs fixed in 2006.1
+
+	#113894 (Bug #22915) ***
+	    'p4 print' without the '-o' flag would cause the proxy
+	    to leak handles on NT systems.  Fixed.
+
+	#107500 (Bug #21905) ***
+	    The proxy would incorrectly keyword expand (or not)
+	    if a revision was lazy copied from a source and
+	    the keyword expansion type modifier was changed.
+	    Fixed.
+
+	#105760 (Bug #21935) ***
+	    p4 print without the -o option would add garbage characters
+	    at the end of the file if the file was text and did not
+	    end with a newline.  Fixed. 
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+New features in 2005.2
+
+	#74564 (Bug #16399) ** ***
+	    The proxy can be configured to only cache file revisions
+	    larger than a certain size set by the '-e' flag or
+	    the P4PFSIZE environment variable.  You must have a
+	    p4d server at the same version level or greater for
+	    this new feature to function.
+
+Bugs fixed in 2005.2
+
+	#84680 **
+	    The server proxy protocol was improved for long latency
+	    links to need less return data.
+
+	#75261 (Bug #13809) ***
+	    Proxy options can be set with the environment variable
+	    P4POPTIONS.  That variable can be set to a string of command
+	    line options.  This allows an NT service to set proxy
+	    options which do not have other environment options.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2005.1
+
+	#90416 (Bug #13481) ***
+	    The previous change 70964 to fix problems with the
+	    Date and DateTime keywords was not correct.
+	    Fixed.
+
+	#70975 (Bug #11840) ***
+	    Starting p4p as a service on NT would fail if upper case
+	    was used for the executable name.  Fixed.
+
+	#70964 (Bug #13481) ** ***
+	    The proxy would expand the Date and DateTime keywords
+	    in text+k files using the proxy's timezone not the
+	    server's resulting in p4 diff -se reporting that the
+	    files did not match the depot.  Fixed if you install
+	    both the new proxy and new server.
+
+	#68597 (Bug #15387) ** ***
+	    The 2003.2 proxy would crash with the 2004.2 server
+	    and vice versa.  The 2004.2 server now talks an
+	    older protocol, which means that keyword expanded files
+	    will not be cached with the 2003.2 proxy talking to
+	    the 2004.2 server.  The 2004.2 proxy will also no longer
+	    crash with the 2003.2 or older servers.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs Fixed in 2004.1
+
+	#50042 (Bug #12136) ***
+	    The proxy did not implement the -i flag which allows
+	    it to be started from an inetd process even though
+	    it was documented.  Now implemented.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs Fixed in 2003.2
+
+	#46146 (Bug #11194) ** ***
+	    The compress option in client specifications
+	    now effects compression only between the proxy
+	    and the client if the proxy is in use.  Previously
+	    a client with compression enabled would cause all
+	    communication to be compressed, i.e. both between
+	    the server and proxy; and between the proxy and
+	    the client.  Now, compression between the server
+	    and the proxy is exclusively controlled by the
+	    proxy's -c flag.
+
+	#46044 (Bug #11212) ** ***
+	    Text files with keyword expansion (ktext, text+k) were
+	    not always handled properly when the proxy was in use.
+	    This is fixed.  (A new p4p or p4d is required, but
+	    performance is best if both the new p4p and p4d are in use.)
+
+	#44303 (Bug #11033) ***
+	    Warning message text changed when the proxy can not
+	    update its cache to indicate the proxy's cache
+	    file name.
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Bugs fixed in 2003.1
+
+	#43921 (Bug #10512) ***
+	    The proxy's RCS based cache files could be corrupted
+	    if concurrent updates to that RCS file occurred
+	    due to multiple clients requesting a revision
+	    from that file.  Fixed.  Related, the executable
+	    bit will no longer be set on RCS files.
+
+	#43265 (Bug #10918) ***
+	    The proxy would terminate operations early
+	    if it had a problem updating its cache.
+	    Now, errors are logged and reported to the client
+	    in this case, but processing continues.  In this
+	    case the client will be updated but the proxy's
+	    cache is not, and the proxy's cache should be
+	    investigated for corruption or file system overflow.
+
+	#43075 (Bug #10892) ***
+	    Performance of the proxy sending many small files
+	    was poor due to not keeping network connections
+	    full.  This change improves performance by better
+	    keeping data in motion.
+
+--------------------------------------------------------------------------
+
+Bug fixed in 2002.2
+
+	#37999 (Bug #9709) ***
+	    Configuring the proxy with an identical P4PORT and P4TARGET
+	    (or -p and -t) ports would cause the server to
+	    fork (or spawn new threads) until the machine's resources
+	    are totally consumed.

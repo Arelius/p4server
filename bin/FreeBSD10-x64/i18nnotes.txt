@@ -1,0 +1,563 @@
+                     Internationalization Notes for
+                    P4D, the Helix Versioning Engine
+                     and Helix client applications
+                            Version 2015.2
+
+        
+Introduction
+        
+        The Helix clients and server have an optional mode of operation
+        where all metadata and some file content are stored in the server
+        in the UTF8 Unicode character set and are translated into another
+        character set on the client.
+        
+        When running in internationalized mode, all non-file data (identifiers,
+        descriptions, and so on), as well as the content of all files of type 
+        "unicode" are translated between the character set specified by the
+        P4CHARSET variable on the client and UTF8 in the server.
+        
+        
+Server configuration
+        
+        Before you use Perforce in an internationalized environment, you must
+        first instruct your server to run in internationalized mode.
+        
+        Setting your server to run in internationalized mode:
+        
+        1.  Run "p4d -xi"
+        
+        This will verify that any and all existing metadata is valid 
+        UTF8 and set a protected counter "unicode" to instruct future
+        invocations of p4d to operate in internationalized mode.  
+        
+        (The "p4d" process invoked by "p4d -xi" does *not* start a Perforce
+        server; rather, it terminates after instructing future invocations 
+        of p4d to run in internationalized mode.  After p4d -xi sets up 
+        internationalized mode, you may then invoke p4d with your site's
+        usual flags.)
+        
+        After setting the server to run in internationalized mode, your 
+        users must also set the P4CHARSET environment variable.
+        
+        Once set on the server, internationalized mode cannot be deactivated.
+        (That is, you cannot return to non-internationalized mode.)
+        
+Client configuration
+        
+	As of 2014.2, the P4CHARSET environment variable is no longer
+	required.
+
+	P4CHARSET may be set to avoid clients having to detect the
+	Unicode nature of a server.  If it is not set, clients may
+	detect and remember the Unicode nature by setting an
+	environment variable of the form 'P4_<p4port>_CHARSET'.
+	See the server release notes for 2014.2 or documentation
+	for details.
+
+	A P4CHARSET value of 'auto' indicates that the client should
+	make operating system specfic checks to determine what
+	character set should be used.
+
+        The following table lists recommended P4CHARSET values for
+        supported character sets and platforms.
+        
+        Language      Platform     Windows        Unix         P4CHARSET
+        			  Code page      LOCALE         setting
+        ------------------------------------------------------------------
+        Japanese      Windows       932           n/a           shiftjis
+        Japanese      UNIX          n/a           varies        eucjp
+        Japanese      UNIX          n/a           varies        shiftjis
+	Chinese	      All	    936		  varies	cp936
+	Chinese	      All	    950		  varies	cp950
+	Korean	      All	    949		  varies	cp949
+        High-ASCII    Windows       1252          n/a           winansi
+        High-ASCII    Windows       1250          n/a           cp1250
+        High-ASCII    Windows       850           n/a           cp850
+        High-ASCII    Windows       852           n/a           cp852
+        High-ASCII    Windows       858           n/a           cp858
+        High-ASCII    Windows       437           n/a           winoem
+        High-ASCII    UNIX          n/a           varies        iso8859-1
+        High-ASCII    UNIX          n/a           varies        iso8859-2
+        High-ASCII    UNIX          n/a           varies        iso8859-15
+        High-ASCII    MacOS         n/a           varies        macosroman
+        untranslated  All           n/a           n/a           utf8*
+	Cyrillic      All	    n/a		  varies	iso8859-5
+	Cyrillic      All	    n/a		  varies	koi-r
+	Cyrillic      All	    1251	  n/a		cp1251
+	Greek	      Windows	    1253	  n/a		cp1253
+	Greek	      UNIX	    n/a		  n/a		iso8859-7
+	All	      All	    n/a		  n/a		utf16*
+        
+	Unicode		Client				Byte-Order-Mark
+	P4CHARSET	Unicode				written to
+	settings	Format				files
+	------------------------------------------------------------------
+	utf8		UTF-8				No
+	utf8-bom	UTF-8				Yes
+	utf8unchecked	UTF-8 (not validated)		No
+	utf8unchecked-bom UTF-8	(not validated)		Yes
+	utf16		UTF-16 in client byte order	Yes
+	utf16le		UTF-16 in Little Endian order	Yes (Windows Style)
+	utf16be		UTF-16 in Big Endian order	Yes
+	utf16-nobom	UTF-16 in client byte order	No
+	utf16le-nobom	UTF-16 in Little Endian order	No
+	utf16be-nobom	UTF-16 in Big Endian order	No
+	utf32		UTF-32 in client byte order	Yes
+	utf32le		UTF-32 in Little Endian order	Yes
+	utf32be		UTF-32 in Big Endian order	Yes
+	utf32-nobom	UTF-32 in client byte order	No
+	utf32le-nobom	UTF-32 in Little Endian order	No
+	utf32be-nobom	UTF-32 in Big Endian order	No
+
+        (Note that eucjp is not a supported P4CHARSET value under Windows.)
+        
+	*Note that utf16 and utf32 require that P4COMMANDCHARSET
+	be set to a different (non-utf16 and non-utf32) charset for
+	the p4 command line to function.  Also, many p4 api based
+	applications will not be able to support utf16 or utf32
+	charsets without special work.
+	*Note also that utf16 can be one of utf16, utf16-nobom,
+	utf16le, utf16le-nobom, utf16be, utf16be-nobom which indicate
+	if Byte-Order-Marks (BOMs) are desired and a particular byte
+	order is desired.  Windows platforms will probably want
+	to use utf16le which matches most closely with Windows
+	concept of Unicode files.  The following notes about P4CHARSET
+	also apply to P4COMMANDCHARSET.  P4COMMANDCHARSET allows
+	for a different charset for command input and output while
+	allowing P4CHARSET to set the charset of file contents.
+
+	*Note that utf8 is untranslated, but effective with clients
+	 built with the p4 api of 2006.1 or later will validate that
+	 file contents are in fact utf8.  Previous clients did not
+	 validate utf8 file contents.
+
+        Setting P4CHARSET on Windows:
+        
+        1.  Log in to Windows and open an MS-DOS command prompt.
+        
+        2.  Run the chcp ("CHangeCodePage") command without any arguments to see
+            your current code page.
+        
+        3.  Display your active code page on Windows machines by issuing
+            the "chcp" command.  Windows displays a message like the following:
+        
+               Active code page: 1252
+        
+        4.  Select the character set based on the active code page as follows:
+        
+            Code page    Set P4CHARSET to:
+        	 1252           winansi
+        	 932            shiftjis
+		 949		cp949
+		 1250		cp1250
+		 1251		cp1251
+		 850		cp850
+		 852		cp852
+		 858		cp858
+		 437		winoem
+		 1253		cp1253
+          
+            To set P4CHARSET for all users on this workstation, you will need
+            Administrator privileges.  Issue the following command:
+        
+               p4 set -s P4CHARSET=[character_set]
+        
+            If you don't have Administrator privileges, you can use:
+        
+               p4 set P4CHARSET=[character_set]
+        
+            to set P4CHARSET for the user currently logged in.  Other users
+            on the same machine will have to set P4CHARSET independently.
+        
+        Setting P4CHARSET on UNIX:
+        
+        1.  Set P4CHARSET to the proper value from either a command shell
+            or in a startup script such as .kshrc, .cshrc, or .profile.
+            You can determine the proper value for P4CHARSET by examining
+            the current setting of the LANG or LOCALE environment variable.
+        
+            Sample $LANG value:    Set P4CHARSET to:
+              en_US.ISO_8859-1          iso8859-1
+              ja_JP.EUC                 eucjp
+              ja_JP.PCK                 shiftjis
+        
+            In general:
+        
+            For a Japanese installation, set P4CHARSET to eucjp
+            For a European installation, set P4CHARSET to iso8859-1
+        
+        
+Unicode file type
+        
+        Files of type "unicode" are stored in the depot in UTF-8.  Perforce
+        client programs use the P4CHARSET environment variable to determine
+        how to translate the UTF-8 data in "unicode" files into the local
+        character set.  Only files of type "unicode" are translated; Perforce
+        ignores P4CHARSET when retrieving or storing files of other file types.
+        
+        The first time you try to submit any file to the depot, Perforce
+        attempts to determine its type by examining a portion (currently
+        the first 8192 bytes) of the file.
+        
+        If P4CHARSET is unset:
+        
+            Files are (by default) assigned the filetypes "text" or "binary"
+            depending on the presence of characters with the high bit set in
+            the first part of the file.  This is the default behavior of
+            Perforce in a non-internationalized environment.
+        
+        If P4CHARSET is set:
+        
+            If nonprintable characters are detected, the file is assigned the
+            type "binary".  If there are no nonprintable characters, and there
+            are high-ASCII characters, *and* those high-ASCII characters are
+            translatable in the defined P4CHARSET, the file is deemed to be
+            "unicode".  Otherwise, the file is stored as type "text" (that is,
+            both plain text files without high-ASCII characters, and files with
+            high-ASCII characters that are undefined in the character set
+            specified by P4CHARSET, are stored as type "text".)
+        
+        To override Perforce's default file type detection, you can:
+        
+            Specify the desired filetype on the command line, as in
+            "p4 add -t unicode file.txt"
+        
+        or:
+        
+            Use the p4 typemap command to assign Perforce filetypes according
+            to a file's extension. For example, the following table assigns
+            the Perforce "unicode" filetype to text and html files, and the
+            Perforce "binary" filetype to PDF files:
+        
+            Typemap:
+        	     unicode     //....txt
+        	     unicode     //....html
+        	     binary      //....pdf
+        
+            For more about using the typemap feature, refer to the Perforce
+            System Administrator's Guide, or the "p4 typemap" page of the
+            Command Reference.
+
+
+UTF16 file type
+
+	Files of type "utf16" are stored in the depot in UTF-8.
+	These files are only in utf16 in the client workspace.
+
+	Commands which output file contents such as p4 diff, p4 annotate,
+	etc will attempt to translate content from the UTF-16 file
+	into the P4CHARSET when in unicode mode	rather than mixing
+	UTF-16 content with non-UTF-16 content.  Note that "p4 print"
+	with the "-o" flag will write a file as UTF-16 while without
+	the "-o" flag output the command will attempt to translate
+	the output to the P4CHARSET.
+
+	When adding files, UTF-16 files will prefer to be stored
+	with the "utf16" filetype rather than the "unicode" filetype
+	even if P4CHARSET is set to a utf16 encoding.  This should allow
+	UTF16 files to live side by side with other character sets.
+	The automatic type detection requires a BOM be present at
+	the start of the file.  Files without a BOM are assumed to
+	be in client byte order.  When utf16 files are written to
+	a client, such as with the 'p4 sync' command, they are
+	written with a BOM and in client byte order.
+	
+
+Diffing files
+        
+        The p4 diff2 command, which compares two files, can
+        only compare files that have the same Perforce file type, 
+        either text or unicode. You cannot compare a text file to
+        a unicode file.
+        
+        
+"CANNOT TRANSLATE" error message
+        
+        This message is displayed if your client machine is 
+        configured with a character set that does not include 
+        characters being sent to it by the Perforce server.
+        Your client machine cannot display unmapped characters.
+        
+        For example, if your client machine is configured to
+        use the shift-JIS character set and your depot contains
+        files named using characters from the Japanese EUC character
+        set that do not have mappings in shift-JIS, you will
+        see the "Cannot translate..." error message when you
+        execute a p4 files or p4 changes command that lists those files.
+        
+        To avoid translation errors, do not use unmapped
+        characters (Japanese EUC character set that do not have 
+        mappings in shift-JIS) in the following Perforce elements:
+        
+        - user names or specifications
+        - client names or specifications
+        - jobs
+        - file names
+
+	Translation failures during file transfers will report
+	a line number near where the translation failure occurred.
+
+        
+Length limit for Unicode identifiers
+        
+        The Perforce server has internal limits on the lengths of
+        strings used to index job descriptions, specify filenames,
+        control view mappings, and identify client names, label names,
+        and other objects.
+        
+        The most common limit is 1024 bytes.  Because some characters
+        in Unicode can expand to more than one byte, it's possible 
+        for certain Unicode entries to exceed Perforce internal limits.
+        
+        Because no basic Unicode character expands to more than three bytes,
+        dividing the Perforce internal limit by three will ensure
+        that no Unicode sequence will exceed the limit.
+        
+        To ensure that no Unicode sequence exceeds the Perforce limit,
+        do not create client names or view patterns that exceed 341 
+        Unicode characters.
+        
+        Under normal usage conditions, this is not expected to pose a
+        significant limitation.
+        
+Localization of error and informational messages
+        
+	The error and informational messages in Perforce have been
+	internationalized.  This means that you can read messages
+	in your native language, if a translation has been provided
+	(localization).
+        
+        if P4LANGUAGE is unset:
+        
+        	By default all messages (info and error) are reported in 
+        	English. 
+        
+        if P4LANGUAGE is set:
+        
+		If a localization is available and your administrator
+		has loaded the language specific messages into the
+		Perforce database then you can activate native
+		messages by setting P4LANGUAGE.
+
+		example
+
+		To have your messages returned in French set
+		P4LANGUAGE to "fr".
+        
+        
+Administrator Notes
+        
+        The Perforce server operates in either an internationalized or a non-
+        internationalized mode.  For release 2001.2, internationalized mode
+        is activated upon invocation of "p4d -xi" as described above.
+        
+        Only Perforce client programs at 2001.2 or above are able to interact
+        with an internationalized server.  P4CHARSET must be set for all such
+        clients.
+        
+	The command line client ("p4") has a new global flag (-C)
+	that overrides P4CHARSET settings.  For instance:
+        
+           p4 -C winansi files //...
+        
+        displays all filenames in the depot, as translated using the winansi
+        code page.
+        
+Instructions for Translators (system integrators)
+        
+        To get a copy of the "English" message text file for translation
+        contact technical support.
+        
+        To build a localized version of this file edit the text strings, taking
+        care not to change any of the key parameters (except for the language
+        code - note "en" changed to "fr"). It is also important not to change
+        the named parameters (specified between %'s)  i.e. %depot% must remain 
+        %depot% (even if there is a valid translation).  Square braces
+	also require special care.
+        
+        example
+        
+	@pv@ 0 @db.message@ @en@ 822220833 @Depot '%depot%' unknown
+	- use 'depot' to create it.@
+
+	to translate into French
+
+	@pv@ 0 @db.message@ @fr@ 822220833 @Depot '%depot%' inconnu
+	- utilisez 'depot' pour le creer.@
+
+	The character set of this file should be utf8.
+
+	Once this file has been completely translated it can be
+	loaded into Perforce with the following command:
+        
+        	p4d -jr /fullpath/message.txt
+        
+        The user would have to set the correct language code to get the native 
+        messages,  for this case P4LANGUAGE would be set to "fr".
+        
+        ---
+
+New functionality for 2015.2
+
+	#1210497 (Bug #79997) *
+	    p4 command line will try to discover a good character set
+	    to use if P4CHARSET is set to a wide character set like
+	    utf16.  p4 set will now allow -C and -Q before the 'set' verb.
+	    Case insensitive platforms now check for setting 'p4charset'
+	    to problematic values.
+
+	#1205092 (Bug #77509) *
+	    Add support for Central European code pages.
+
+New functionality for 2014.2
+
+	#796968 (Bug #71400) *
+	    Add support for Greek code pages.
+
+Bugs fixed in 2014.2
+
+	#844511 (Bug #71329) **
+	    p4 -ztag changes on a Unicode server would report a partial
+	    unicode character if there were 31 characters and only the
+	    last one was a utf8 multibyte character.  Fixed to truncate.
+
+Bugs fixed in 2014.1
+
+	#749946 (Bugs #29923, #70101) *
+	    UTF16 file detection changed to help block audio files
+	    from being detected as UTF16.  Files which start with a
+	    UTF16 BOM (Byte order mark) but which are not valid UTF16
+	    or do not meet some textual tests will be considered binary.
+
+	#740482 (Bug #69603) *
+	    Conversions between the different Unicode UTF formats allow
+	    the code positions U+FFFE and U+FFFF now.  These are
+	    'sentinels' not characters and do not have printable
+	    forms, but are translatable.
+
+New functionality for 2013.2
+
+	#589668 (Bug #17341, #41143) * **
+	    Two usability improvements have been made for Unicode mode servers:
+		1) A default value for the client's P4CHARSET will now be
+		   chosen based on the platform and code page if P4CHARSET
+		   is not set explicitly.
+		2) Files of type 'unicode' will now have the character set
+		   versioned along with the file type.  Clients can opt to
+		   operate on files using the character set stored on the
+		   server by setting P4DEFAULTCHARSET=server.  This setting
+		   permits multiple character sets to be used within the
+		   same workspace.  New files inherit the submitting client's
+		   P4CHARSET by default, and may have the charset changed 
+		   with the -Q flag on commands that open or reopen files.
+
+Bugs fixed in 2012.1
+
+	#367337 (Bug #50712) **
+	    The unknown command error was not reporting in languages
+	    other than english.  Fixed.
+
+	#369439 (Bug #14749) *
+	    Translation errors during file transfers now report the file
+	    name.
+
+	#334376 (Bug #47081) *
+	    File type detection changed so that files with a UTF8 BOM
+	    are detected as text if the content character set is not
+	    UTF8.  This was done because some character sets would likely
+	    misdetect a utf8 file as their other character set and
+	    mis-translate them.
+
+
+Bugs fixed in 2009.2
+
+	#222762 (Bug #36460) **
+	    Commands logged by a unicode mode server into the log file
+	    with long argument lists would elude the argument list, but
+	    that did not understand multi-byte characters and would
+	    corrupt characters around the eluded bytes.  Fixed.
+
+	#221032 (Bug #34579) *
+	    p4 set command would not always find configuration files if
+	    the P4CHARSET is set to shiftjis and certain characters
+	    are in the current directory path.
+ 
+	#220207 (Bug #36124) **
+	    Windows p4d servers in unicode mode with a root/depot or temporary
+	    directory with non-ascii characters can fail to submit files.
+	    Fixed.
+
+	#219031 (Bug #34607) *
+	    On Windows platforms, files with unicode characters in their names
+	    are not created with their correct names if the P4CHARSET is
+	    set to a unicode charset other than utf8.  Fixed.
+
+	#218979 (Bug #34613) *
+	    p4 set P4CHARSET to a wide character set such as utf16
+	    will no longer be allowed unless P4COMMANDCHARSET is set
+	    to a non-wide charset first.
+
+	#218341 (Bug #35849) *
+	    Conversion from UTF32 to UTF8 was not available.
+	    Fixed.
+
+
+New functionality for 2009.1
+
+        #178152 (Bug #11452) *
+	    Korean support added with P4CHARSET set to cp949.
+
+Bugs fixed in 2009.1
+
+        #205042 (Bug #25229) **
+	    Password strength checking was not done for unicode
+	    mode servers.  With 2009.1 this checking is performed.
+	    Passwords will still need a roman letter in addition
+	    to unicode characters, that is they can not be purely
+	    non-roman letters.
+
+
+Bugs fixed in 2008.2
+
+        #164665 *
+	    'p4 tickets' would report garbage characters if p4v was
+	    used to login via a ticket and the server is in unicode mode
+	    with a P4CHARSET not utf8.  This fix causes the user name
+	    in the ticket file to always be stored in utf8 and translated
+	    as needed to P4CHARSET.  Ticket entries from old clients
+	    may no longer be compatible as they may have been stored
+	    with other character encodings than utf8.  When a
+	    character in the ticket file can not be translated it
+	    will now appear as '?'.  (Bug #26025)
+
+
+Bugs fixed since 2006.2/112639 (first release)
+
+        #114374 *
+	    When p4d is in unicode mode, and the p4 command line
+	    has P4CHARSET set to a wide character set (i.e. utf16)
+	    and P4COMMANDCHARSET set to a character set other than
+	    utf8, p4 commands to edit specifications would interpret
+	    those specs as utf8 instead of the P4COMMANDCHARSET.
+	    Fixed.  (Bug #23004)
+
+
+Changes since 2005.2/91006 (first release)
+
+	#91576 *
+
+	The following character mappings have changed to more closely
+	match newer conventions and consistency in use of 'fullwidth'
+	characters where possible.  (Bug #19817)
+
+shiftjis eucjp     new     old     new			 old
+code     code     unicode unicode description            description
+8160     A1C1     U+FF5E  U+301C  FULLWIDTH TILDE        WAVE DASH
+8161     A1C2     U+2225  U+2016  PARALLEL TO            DOUBLE VERTICAL LINE
+817C     A1DD     U+FF0D  U+2212  FULLWIDTH HYPHEN-MINUS MINUS SIGN
+8191     A1F1     U+FFE0  U+00A2  FULLWIDTH CENT SIGN    CENT SIGN
+8192     A1F2     U+FFE1  U+00A3  FULLWIDTH POUND SIGN   POUND SIGN
+
+
+
+        $Id: //depot/r15.2/p4-doc/user/i18nnotes.txt#1 $

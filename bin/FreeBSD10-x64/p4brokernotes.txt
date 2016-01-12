@@ -1,0 +1,1025 @@
+                        Release Notes for
+                  P4Broker, the Helix Broker
+                         Release 2015.2
+
+About this Document
+-------------------
+
+	This document lists all user-visible changes to the Helix 
+	Broker (P4Broker) between Release 2007.3 and 2015.2.
+
+	Perforce numbers releases YYYY.R/CCCCC, e.g. 2002.1/30547.
+	YYYY is the year; R is the release of that year; CCCCC is the
+	bugfix change level.  Each bugfix in these release notes is
+	marked by its change number.  Any build includes (1) all bugfixes
+	of all previous releases and (2) all bugfixes of the current
+	release up to the bugfix change level.
+
+	Passing the '-V' flag on the p4broker command-line will cause the
+	P4Broker to report its version information. Additionally, P4Broker
+	adds its version information to the output of the 'p4 info'
+	command.
+
+--------------------------------------------------------------------------
+
+Important security note
+    This release links OpenSSL version 1.0.1p. The OpenSSL 1.0.1p
+    version addresses the following vulnerability:
+    * CVE-2015-1793
+
+--------------------------------------------------------------------------
+
+
+Interoperating With Previous Releases
+-------------------------------------
+
+    1.	The Helix Broker is compatible with 2007.2 and later
+	Helix clients, and servers. 
+
+	Any functionality new to 2013.2 requires you to upgrade
+	the client, the server and/or the broker.  
+	See marks in the notes below.
+
+	    * -- requires new p4 client program
+	    ** -- requires new p4d server program
+	    *** -- requires new p4broker broker program
+
+Introduction 
+------------ 
+
+The Helix Broker (P4Broker) enables you to implement local
+policies in your Helix environment by allowing you to restrict
+the commands that can be executed, or redirect specific commands to 
+other Helix Versioning Engines. The Helix Broker is a server process that 
+mediates between Helix client applications and Helix servers, 
+including proxy servers. The Helix Broker is designed to run 
+on a host that lies close to the Helix Versioning Engine (P4D), 
+preferably on the same machine. Example: Helix client 
+applications can connect to a proxy server that connects to the 
+broker, which connects to a Helix Versioning Engine.
+
+This document tells you how to install, configure and launch the 
+Helix broker. To deploy the Helix Broker, you must:
+
+1.     Install it
+
+2.     Create a broker configuration file
+
+3.     Start the broker
+
+The following sections tell you how to perform these steps.
+
+Support Status
+--------------
+
+The Helix Broker is currently supported.
+
+Supported Platforms
+-------------------
+
+Linux kernel 2.6 for ARM
+Linux kernel 2.6 for 64-bit Itanium
+Linux kernel 2.6 for Intel(x86,x86_64)
+FreeBSD 10.0 for Intel(x86, x86_64)
+Windows for 64-bit Itanium
+Windows for Intel(ntx86,ntx64)
+Apple Darwin 9.0 for Intel(x86,x86_64)
+
+Terms of Use
+------------
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL PERFORCE SOFTWARE, INC. BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Compatibility
+-------------
+
+The 2014.2 Release of the Helix Broker requires a 2007.2 or later client,
+and a 2007.2/131114 or later p4d.  It is not compatible with 
+older releases of Perforce.
+
+Installing the Broker 
+--------------------- 
+
+Download the p4broker executable from the Perforce Web site to a suitable
+directory on the machine where it'll run (such as /usr/local/bin or
+C:\Program Files\Perforce).  On Unix systems, ensure that the binary is
+executable by setting the appropriate permissions.  For example:
+
+     chmod +x /usr/local/bin/p4broker
+
+Creating a Broker Configuration File
+------------------------------------ 
+The broker configuration file is a text file containing rules that: 
+
+o     Specify commands that individual users can issue, and
+
+o     Define the commands that are to be redirected to 
+      specified servers
+
+To generate a sample broker configuration file, issue the following 
+command:
+
+     p4broker -C > p4broker.conf
+
+You can edit the newly-created p4broker.conf file to specify your 
+requirements. The following section explains the configuration 
+options available to you.
+
+Format of Broker Configuration Files
+------------------------------------
+A broker configuration file contains three sections:
+
+o     Global settings: settings that apply to all broker 
+      operations.
+
+o     Alternate server definitions: the addresses and names of 
+      servers to which commands can be redirected in specified 
+      circumstances
+
+o     Command handler specifications: specify how individual 
+      commands should be handled; in the absence of a command handler 
+      for any given command, the Helix Broker will permit the 
+      execution of the command.
+
+o    Router specifications: when using the p4broker to route between
+     a group of workspace servers in a Helix Cluster, or between
+     a group of edge servers.
+
+In broker configuration files you must double-quote text that contains 
+spaces.
+
+Global Settings
+---------------
+The following settings apply to all operations you are specifying 
+for the broker.
+
+	target: The default Helix Versioning Engine (P4D) to which commands are 
+	sent unless overridden by other settings in the configuration 
+	file. Syntax: target = host:port;
+
+	listen: The address on which the Helix Broker listens for 
+	commands from Helix client applications.  Use 'rsh' to run
+	the broker from inetd (along with the -q command-line flag.)
+	Syntax: listen = [host:]port;
+
+	directory: The home directory for the Helix Broker. Other paths 
+	specified in the broker configuration file must be relative to this 
+	location. Syntax: directory = path;
+
+	logfile: The path to the Helix Broker logfile.
+	Syntax: logfile = path;
+
+	debug-level: The level of debugging output to log.  
+	Syntax: debug-level = server=1;
+
+	admin-name: The name of your Perforce Administrator. This 
+	information is displayed to the user in certain error messages. 
+	Syntax: admin-name = "name";
+
+	admin-email: The email address at which users can contact their 
+	Perforce Administrator. Syntax: admin-email = email address;
+
+	admin-phone: The telephone number of the Perforce Administrator. 
+	Syntax: admin-phone = phone#;
+
+	redirection: The redirection mode to use. Two modes are defined:
+	'selective' and 'pedantic'. Versions of the P4Broker prior to 
+	2008.1 only supported 'pedantic' mode in which all requests for
+	redirection are honoured. In 'selective' mode, redirection is
+	permitted, within a session, until one command has been executed
+	against the default (target) server. From then on, all commands
+	within that session will run against the default server and will
+	not be redirected. This mode is intended to help GUI interfaces
+	display more accurate information when used with replicas. Note
+	that from the 2008.1 P4Broker, 'selective' redirection is the
+	default.
+	Syntax: redirection = selective | pedantic ;
+
+	destination: When this setting is used at the global level
+	it pertains to a p4broker being used as a cluster router.
+	Adding the global directive:
+	       Syntax: destination target;
+	will cause the router to direct all requests to the current
+	depot-master.  This syntax should be used when a cluster 
+	does not contain any workspace servers. This option was
+	added in 2014.2.
+
+Alternate Servers
+-----------------
+The Helix Broker can direct user requests to an alternate 
+server to reduce the load on the default server. These alternate 
+servers must be replicas of the target server. There is no 
+limit to the number of alternate servers you can define in a 
+broker configuration file.
+
+The syntax for specifying an alternate server is as follows:
+
+    altserver: name 
+    {
+	target = host:port;
+    }
+
+The name assigned to the alternate server is used in command 
+handler specifications, as described in the next section.
+
+Command Handlers
+----------------
+Command handlers enable you to specify how specific commands are 
+handled. When users run commands, the Helix Broker will search for 
+matching command handlers, and evaluate them until the first non-passing
+match is found. If no command handler matches the user's command, it will
+be forwarded to the target Helix Versioning Engine for normal processing.
+
+The general syntax of a command handler specification is as 
+follows:
+
+    command: commandpattern
+    {
+	# Conditions for the command to meet; (optional)
+	flags	    = required flags;
+	user	    = required user;
+	workspace   = required client workspace;
+	prog	    = required Helix client application;
+	version	    = required version of client application;
+	checkauth   = require user be authenticated;
+
+	# What to do with matching commands (required)
+	action	    =  pass | reject | redirect | filter | respond ;
+
+	# How to go about it
+	destination = altserver;	  # Required for action = redirect
+	execute	    = filter program;	  # Required for action = filter
+	message	    = message;  	  # Required for action = reject and
+					  # action = respond. Otherwise optional
+    }
+
+The following table describes the parameters in detail.
+
+	action: Defines how the Helix Broker handles the specified 
+	commands. Valid values are:
+
+		o     pass 
+		o     reject
+		o     redirect
+		o     filter
+		o     respond
+
+	destination: For redirected commands: the name of the alternate 
+	server to which the commands are redirected. Must be the name of 
+	a previously defined alternate server.  If the name is 'random',
+	the alternate server is chosen arbitrarily from those available.
+
+	checkauth: Check that the user has access to the Helix Versioning 
+	Engine before performing the action. This can be set to "true" or
+	"false". If set to "true", the Helix Broker will run "p4 protects -m"
+	with the user's connection. If set to FALSE or unset, the check
+	is not performed. If a filter program is run, the highest level
+	permission the user has is passed in as the maxPerm parameter.
+	
+	execute: The path to a filter program to be executed. For details 
+	about filter programs, see "Filter Programs," below.  Note that
+	for interpreted scripts, you may need to first give the path to
+	the interpreter, then pass the script as an argument to it.
+
+	flags: A list of flags that must be present on the command line of 
+	the command being handled. This feature enables you to specify 
+	different handling for the same p4 command, depending on which 
+	flags the user specifies. Note that only single character flags
+	may be specified here. Multi-character flags, and flags that
+	take arguments should be handled by a filter program (see below).
+
+	message: A message to be sent to the user; may be used with any
+	of the above actions.
+
+	prog: The Helix client application through which the user 
+	issued the command. This feature enables you to handle commands 
+	on a per-application basis.
+
+	user: The name of the user who issued the command. 
+
+	version: The version of the Helix client program through which 
+	the user issued the command. 
+
+	workspace: The Helix client workspace setting in effect when 
+	the command was issued.
+
+Filter Programs
+---------------
+When the action for a command handler is filter, the Helix 
+Broker executes the program or script specified by the execute 
+parameter and performs the action returned by the program. Filter 
+programs enable you to enforce policies beyond the capabilities 
+provided by the broker configuration file.
+
+The Helix Broker invokes the filter program by passing command 
+details to the program"s standard input (stdin) in the following 
+format:
+
+	command:         user command
+	clientProg:      client program
+	clientVersion:   version of client program
+	clientProtocol:  level of client protocol
+	apiProtocol:     level of api protocol
+	workspace:       name of client workspace
+	user:            name of requesting user
+	clientIp:        IP address of client
+	proxyIp:         IP address of proxy (if any)
+	cwd:		 Client's working directory
+	maxPerm:	 highest permission (if checkauth set)
+	argCount:        number of arguments to command
+	Arg0:            first argument (if any)
+	Arg1:            second argument (if any)
+
+
+Your filter program *must* read this data from stdin before
+performing any additional processing, regardless of whether the
+script requires the data. If the filter script does not read 
+the data from stdin, "broken pipe" errors can occur. In this case,
+the broker rejects the user's command.  Note that non-printable
+command arguments are percent-encoded.
+
+Your filter program must respond to the Broker on stdout with one 
+of the following messages:
+
+        action: PASS
+        message: Some message for the user (optional)
+        
+        action: REJECT
+        message: Some message for the user (required)
+        
+        action: REDIRECT
+        altserver: <altserver name>
+        message: Some message for the user (optional)
+        
+        action: RESPOND
+        message: Some message for the user (required)
+
+The 'action' keyword is always required and tells the Broker how to 
+respond to the user's request. The available actions are:
+
+	PASS		- Run the user's command unchanged
+	REJECT		- Reject the command with a message
+	REDIRECT	- Run the command on a different server 
+	RESPOND		- Just respond with a message to the user (no command
+			  is run on the server).
+
+Note that for backwards compatibility purposes, the response format used by
+older versions of the broker is still accepted.  
+
+If the filter program returns any response other than the three 
+listed above, the user's command is rejected. Errors that occur 
+during the execution of your filter script code cause the broker 
+to reject the user's command. In this case, the broker returns the
+error message.
+
+
+Starting the Broker
+-------------------
+To start the Helix Broker from the command line, issue the 
+following command:
+
+     p4broker -c config_file -d
+
+Alternatively, you can set P4BROKEROPTIONS before launching
+the broker, to specify the broker configuration file to use. For example:
+
+    Unix:
+	export P4BROKEROPTIONS="-c /usr/perforce/broker.conf"
+	p4broker -d
+
+    Windows:
+	p4 set -s P4BROKEROPTIONS="-c c:\p4broker\broker.conf"
+	p4broker 
+
+The Helix Broker reads the specified broker configuration file 
+and on Unix platforms the -d flag causes the Helix Broker to
+detach itself from the controlling terminal and run in the 
+background. 
+
+To configure the Helix Broker to start automatically, put this 
+command in a startup script that is appropriate to your host operating 
+system. On Windows systems, you can run the broker as a service:
+
+	http://kb.perforce.com/article/998
+
+Configuring Alternate Servers with Authentication Servers
+----------------------------------------------------------
+Alternate servers require users to authenticate themselves when 
+they run commands. For this reason, the Helix Broker must be 
+used in conjunction with the Helix authentication server 
+(P4AUTH) and p4d at version 2007.2/131114 or later. 
+When used in this configuration, a single "p4 login" request can 
+create a ticket that is valid for the user across all servers in 
+the Helix Broker's configuration, enabling the user to log in 
+once. The Helix Broker assumes that a ticket granted by the
+target server is valid across all alternate servers.
+
+Important: If the target server in the broker configuration file 
+is a central authentication server, the value assigned to the 
+"target" parameter must precisely match the setting of P4AUTH on 
+the alternate server machine(s). Similarly, if an alternate server 
+defined in the broker configuration file is used as the central 
+authentication server, the value assigned to the "target" parameter
+for the alternate server must match the setting of P4AUTH on the 
+other server machine(s).
+
+Protections
+-----------
+
+The p4 protect command can distinguish connections coming from a broker if
+the string 'proxy-' is prepended to the IP addresses of the true client
+and used in the protections table.  For example, 'proxy-*' applies to all
+connections from all brokers and 'proxy-10.0.0.5' identifies a host with
+an IP address of 10.0.0.5 and connecting to p4d through a broker. This
+behavior is configurable; see 'p4 help protect'.
+
+Routing
+-----------
+
+In routing mode a p4broker will keep a local cache of the mapping of
+client to server location.  This functionality is used to direct
+requests from clients that are distributed across a group of edge 
+or workspace servers (the later being in a Helix Cluster).
+
+Configuring routing for use with a Helix Cluster
+---------------------------------------------------------- 
+In 2014.2 a p4broker can be used as a router to distribute work across
+a group of clustered workspace servers. To enable this functionality an
+additional router block must be specified in the configuration file.
+
+The general syntax of a command handler specification is as 
+follows:
+
+    router: routerId
+    {
+	# Mandatory cluster configuration (should match those values
+	# set in the cluster's p4d configurations)
+	cluster.id	               = mycluster;
+	p4.utils.dir              = /opt/perforce/bin;
+	zk.host.port.pairs   = svr1.foo.com:2181,svr2.foo.com:2181,svr1.foo.com:2181;
+
+	# Optional override of default timeout of 300 seconds (5 min)
+	# This controls how long the router's p4zk process will wait 
+	# for the Zookeeper servers to accept a connection.
+	zk.connect.timeout = 150;
+    }
+
+It should be noted that once a broker is started with a router block
+in its configuration file it will launch a child p4zk process to
+handle communcation with cluster.  The broker will communicate
+with the p4zk process across a unix domain socket located in the
+broker's configuration directory.  The associated p4zk process will
+keep track of changes in the cluster's membership and update the
+altserver entries and/or the target entry as needed.
+
+Configuring routing for use with a group of Edge Servers
+----------------------------------------------------------
+
+To route between a group of edge servers:
+    * Setup altserver entries for each edge server
+    * Add the globally scoped keyword: router; to the configuration
+
+Example:
+    router;
+
+    altserver: edge1 
+    {
+	target = edge1.foo.com:2666;
+    }
+    altserver: edge2 
+    {
+	target = edge2.foo.com:2666;
+    }
+    altserver: edge3 
+    {
+	target = edge3.foo.com:2666;
+    }
+
+---------------------------------------------------------------------------
+Note: see the following marks in the notes below.
+
+	    * -- requires new p4 client program
+	    ** -- requires new p4d server program
+	    *** -- requires new p4p program
+	    **** -- requires new p4broker program
+---------------------------------------------------------------------------
+
+Minor new functionality in 2015.2
+
+	#1208221 ****
+	     A 'checkauth' statement may now be set on command handlers.
+	     This will cause the connection to be authenticated, and will
+	     provide the user's highest permission to any filter programs.
+
+---------------------------------------------------------------------------
+
+Bugs fixed in 2015.1 PATCH 1
+
+	#1241043 (Bug #81015) ****
+	    Commands run against a router via a proxy could hang whilst
+	    authenticating the user to build the routing table.
+	    Fixed.
+
+Bugs fixed in 2015.1
+
+	#971788 ****
+	    When a router looks up a server id but no matching altserver
+	    is found, no route will be recorded, an error will be logged
+	    in the broker log, and the command will be attempted following
+	    default routing rules.
+
+---------------------------------------------------------------------------
+
+Minor new functionality in 2014.2
+
+	#933122 ****
+	     The "destination" statement now allows "destination target;",
+	     which sets the destination to the current "target" value.
+	     This is useful in a DCS configuration, because DCS may re-write
+	     the "target" value when appropriate.
+
+	#894774 (Bug #45821)
+	    Filter programs may now return an action of 'CONTINUE' if they
+	    wish to defer to the next command handler matching a given command.
+
+	#833122 (Bug #53831) ****
+	    Debug output will go to a log file if specifed instead of
+	    stdout.
+
+Bugs fixed in 2014.2 PATCH 1
+        #944004 (Bug #74754) ****
+	    Now we allow the Zookeeper servers to lag behind the boot 
+	    of the rest of the cluster routers (p4brokers). The default
+	    timeout is 5 minutes but it can be changed via an optional 
+	    zk.connect.timeout entry in the router block of the broker 
+	    configuration file. Although numeric, the value can be
+	    expressed as a quoted string. e.g.
+	    zk.connect.timeout = "150";
+
+Bugs fixed in 2014.2
+	#885741 (Bug#73530) ****
+	     A PASS handler followed by a REJECT handler now correctly
+	     defers to the REJECT handler.
+
+	#819171 (Bug #72176) ****
+	    When the broker responds without contacting a server, it
+	    would not reflect the unicode client status back properly.
+	    Fixed.
+
+	#793057 (Bug #70555) ****
+	    The config file syntax error message now includes the file name.
+
+---------------------------------------------------------------------------
+
+Major new functionality in 2014.1
+
+	#729048 (Bug #45821)
+	    Allow the Broker to process more than one command handler per
+	    command.  This makes it behave like server triggers, where
+	    each matching trigger runs until a failure (or in the case of
+	    the Broker, a non-pass action) occurs.  Previously it would only
+	    consider the first match.
+
+	    Note that there's the potential for a change in behavior with
+	    existing rulesets if you've got a pass action followed by a
+	    reject where they both match - a command that previously passed
+	    would now be rejected.  Users should inspect their configuration
+	    for such cases and make corrections.
+
+Bugs fixed in 2014.1
+
+
+
+	#773324 (Bug #70306) ****
+	    When the broker is installed as a service on Windows machines,
+	    P4TRUST and P4TICKETS were not honoring the service environment
+	    i.e. 'p4 set -S <service>'  Fixed.
+
+	#765126 (Bug #69975) **
+	    The dm.proxy.protects configurable may be used to control the
+	    behavior described under "Protections" above. For more
+	    information, please see 'p4 help protect'.
+
+	#724523 (Bug #53364) ****
+	    When the configuration file is changed, the change was
+	    not effective until a broker connection after the next
+	    connection.  It will now have immediate effect.
+	    Also, the configuration parse line number is reset when
+	    reloaded.  A failed configuration reload is retried
+	    in case a partial read of an on the fly update of the
+	    configuration file and the configuration file is locked
+	    when being loaded.
+
+	#721516 (Bug #56169)
+	    Always pass the "proxyIp" field (which is actually any intermediate
+	    process) to filter programs regardless of whether the peer IP
+	    address is the same as the client's (the prior behavior.)
+
+	    This change also exposes an intermediate Broker/Proxy API level
+	    to filter programs (proxyLevel/brokerLevel).
+
+---------------------------------------------------------------------------
+
+Bugs fixed in 2013.2
+
+	#625332 (Bug #64350) *** **
+	    If a brokered 'p4 sync' should fail due to a network communications
+	    problem between the broker and the client, or because the client
+	    was terminated during the 'p4 sync', the broker now notifies the
+	    server of the client communications error more rapidly, and the
+	    server will now terminate the 'p4 sync' command more rapidly.
+
+---------------------------------------------------------------------------
+
+Major new functionality in 2012.2
+
+	#449804
+	    ZeroConf support has been removed.  Note that existing config files
+	    will need to remove the zeroconf, server-name and server-desc
+	    options from existing config files before the broker will start.
+
+	#450071 (Bug #53019) ** *** ****
+	    Link compression is now optional.  Previously the broker would
+	    unconditionally decompress/recompress a compressed incoming
+	    connection.  This is controlled via the 'compress' config key.
+
+Bugs fixed in 2012.2
+
+	#468428 (Bug #56225)
+	    A client's disconnect would not be recognized by the server if it
+	    happened during a command's compute phase.
+
+	#437433 (Bug #39863)
+	    Improved handling of P4BROKEROPTIONS set via a P4CONFIG file.
+
+	#437371 (Bug #43482)
+	    Documented how to run the broker via inetd.  See the
+	    "listen" definition in the "Global Settings" section.
+
+	#437031 (Bug #50727) ** *** ****
+	    The broker's part of "p4 -ztag info" is now included in the
+	    same message as the server's part.  It was previously sent
+	    as a separate message, which could confuse some client programs.
+
+	#426299 (Bugs #47645, #53006) ****
+	    Premature client disconnects, such as those caused by a
+	    user interrupting a command, now result in quicker notifications
+	    of the disconnect to the server.
+
+---------------------------------------------------------------------------
+
+Major new functionality in 2012.1
+
+	#389715 (Bug #43247)
+	    Command handlers now use regular expressions for the
+	    command name, args, user, workspace, prog and version.  Note that
+	    this makes existing handler definitions slightly more permissive.
+	    E.g. "command: integ" will now also match "integrate".  To make
+	    "integ" do what it used to, write it like this;  "^integ$".
+	    Previous handlers written with the '*' wildcard will need to
+	    change "*" to ".*" to behave the same.  E.g. "integ*" -> "integ.*".
+
+	#372184,#373711 (Bugs #2493, #9875) **** ** *
+	    P4PORT settings may now include the 'ssl:' prefix. In addition,
+	    the existing but undocumented 'tcp:' prefix is now fully documented
+	    and supported; it can be useful for cases where you desire to
+	    explicitly indicate that the connection is cleartext.
+	    The 'ssl:' prefix may be specified in P4PORT values to cause
+	    the client and server to use SSL encryption of network traffic.
+	    If this prefix is used, it must be used in both server and
+	    and client. An SSL-enabled server will only accept connections
+	    from SSL-enabled clients, and a server which does not specify the
+	    ssl: prefix will not accept connections from clients that do.
+
+Minor new functionality in 2012.1
+
+	#391198 (Bug #46777)
+	    Filter programs now get the broker's listen and target ports.
+	    E.g. brokerListenPort=1666 and brokerTargetPort=1667.
+
+	#391107 (Bug #42542)
+	    New command "p4 broker" reports information on the broker
+	    without connecting through to a p4d server.
+
+	#390861 (Bug #50886)
+	    Support for randomly choosing the alternate server used to redirect
+	    a command to.  In a command handler, specify 'destination = random'.
+
+	#389869 (Big #42504)
+	    Command handlers can now filter on command arguments.
+
+	#389473 (Bug #40677)
+	    The login and logout commands can now be filtered. 
+
+	#389457 (Bug #25761)
+	    When maxLockTime, maxScanRows and maxResults are set by a client
+	    program, they are now passed to filter scripts.
+
+Bugs fixed in 2012.1
+
+	#390097 (Bug #31904)
+	    Logging of redirected commands now uses the correct altserver
+	    address.
+
+	#390027 (Bug #42561)
+	    Certain non-printable command arguments sent to filter programs
+	    are now percent-encoded.  E.g. \t -> %09.
+
+	#389212 (Bug #40676)
+	    Identical target and listen ports, or altserver ports the same
+	    as the listen port are now detected and prevented.
+
+	#326612 (Bug #41393)
+	    No more 'server too old' message when the second in a chain
+	    of brokers rejects a command.
+
+---------------------------------------------------------------------------
+
+Major new functionality in 2011.1
+
+	(none)
+
+Minor new functionality in 2011.1
+
+	# 324990 (Bug#46138)
+	    Added support for filtering/passing remote depot operations.
+
+	# 324988 (Bug#42582) ****
+	    Added service user support.
+
+	# 280933 (Bug#26843) ****
+	    Added ZeroConf support.
+
+Bugs fixed in 2011.1
+
+	# 336000 (Bug#47270)
+	    Fixed a memory leak when a filter program failed to execute or
+	    when a too-old client connected.
+
+	# 326612 (Bug#42528)
+	    REJECT messages are now delivered to clients enforcing a
+	    minimum server version.
+
+	# 284427 (Bug#42891)
+	    The broker now understands Windows-style line separators
+	    in dictionary-formatted output.
+
+	# 284427 (Bug#42527)
+	    Unterminated multi-line filter program responses no longer crash.
+
+	# 282498 (Bug#30667)
+	    Broker help output is more clear regarding P4BROKEROPTIONS.
+
+---------------------------------------------------------------------------
+
+Major new functionality in 2010.2 
+
+	(none)
+
+Minor new functionality in 2010.2 
+
+	(none)
+
+Bugs fixed in 2010.2
+
+	# 276197 ****
+	    The broker now reuses connections to the server wherever
+	    possible. This improves both performance and resource
+	    utilization. (Bug#41547)
+
+----------------------------------------------------------------------------
+Minor new functionality in 2010.1
+
+	# 198952 ****
+	    The format of the response from Command Handlers to the Broker
+	    has changed to a dictionary-like format. This will enable
+	    more complex functionality in future releases of the broker. Now
+	    responses must be of the form:
+	    
+	        keyword: value
+	        
+	    Where valid keywords are: 'action', 'message', 'altserver'
+	    
+	    This functionality was previously undocumented.
+	    
+	# 136173 ****
+	    The Broker now supports a new action: 'RESPOND' which sends a
+	    message to the user without executing any command on the 
+	    Perforce Server. This differs from REJECT in that the message
+	    in question is informational, rather than an error message.
+	    
+	    This functionality was previously undocumented.
+	    
+Bugs fixed since first release (#251161)
+
+	#273651 (Bug#41885) ****
+	
+	    The broker was leaking memory with every request when an 
+	    altserver entry was included in the configuration file. This
+	    problem has been corrected.
+	    
+	#273135 (Bug#41823) ****
+	    The broker could leak a significant number of bytes, depending
+	    on the configuration. This problem has been corrected.
+
+	#262169 (Bug#40427) ****
+	    The broker would leak a few bytes with every request. This
+	    problem has been corrected.
+
+Bugs fixed in 2010.1
+
+	#223420 (Bug #36666) ****
+	    The broker could crash if command handlers for 'p4 user', 
+	    'p4 login', or 'p4 workspace' were defined.  This problem has 
+	    been corrected.
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Bugs fixed in 2009.2
+
+	#250209 (Bug39339) ****
+
+	    Multi-line messages from filter programs were no longer
+	    working. Now multi-line responses are permitted again, provided 
+	    that they are enclosed in quotations. For example:
+
+		RESPOND "Some text
+			on more than one
+			line"
+
+	#241781 (Bug#38617) ****
+	    Use of 'reject', or 'respond' actions when a proxy server was
+	    between the broker and the client would result in the 
+	    proxy server saying "Server is too old for use with Proxy".
+	    This problem has been corrected.
+
+	#231337 (Bug#37517) ****
+	    Premature disconnects by the client could crash the broker. This
+	    problem has been corrected.
+	    
+	#197906 (Bug #30500) ****
+	    P4BROKEROPTIONS was not included in the output of
+	    'p4 set'. This problem has been corrected.
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Bugs fixed in 2009.1
+
+	# 208496 (Bug #34738) ****
+	    The broker did not recognize the 'version' keyword in command
+	    handler specifications in its configuration file; so all 
+	    version-based rules had to be implemented with filter scripts. 
+	    This problem has been corrected.
+
+	#198280, #196565 (Bug #28667) ****
+	    Premature client disconnects, such as those caused by a
+	    user interrupting a command, could leave behind an orphaned
+	    p4broker process, and its associated p4d process. This
+	    problem has been corrected.
+
+	#183735 (Bug #31522) ****
+	    The P4Broker did not work when there was a Perforce Proxy
+	    Server between the broker and the client and the Proxy Server
+	    was configured to compress the connection to the broker. This
+	    problem has been corrected.
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Major new functionality in 2008.2
+
+	#161245 ****
+	    The P4Broker now dynamically reloads its configuration file
+	    when it detects that the file has changed. All settings 
+	    apart from a select few may be updated in this way. The 
+	    settings that cannot be dynamically updated are:
+
+		listen	- the listen address
+		directory 	- the broker's home directory
+		logfile 	- the broker's log file
+
+	    Changing any of the above settings can only be done by
+	    restarting the broker.
+
+	    Note that the broker must process one user command before the
+	    updated configuration takes effect.  In other words, the new
+	    configuration is active on the second command, after the broker
+	    has cleared its cache.
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Major new functionality in 2008.1
+
+	#157847 ****
+	    The P4Broker now supports two redirection modes: 'selective',
+	    and 'pedantic' redirection. Selective redirection is the 
+	    default, while pedantic redirection is the mode supported
+	    by previous versions of the P4Broker. Thus, for backwards
+	    compatible behaviour, the following line should be added
+	    to the global section of your P4Broker configuration file:
+
+		redirection = pedantic;
+
+	    In pedantic redirection, all redirections are honoured; in
+	    selective redirection, redirects are honoured, within each
+	    session, until one command is not redirected and runs against
+	    the default (target) server. This mode will give GUI users
+	    a better user-experience than pedantic mode.
+
+	#157281 ****
+	    A new action 'respond', which allows the administrator to
+	    send output to the user without running a Perforce command,
+	    has been implemented.
+
+	#157281 (Bug #25768) ****	
+	    A 'message' setting may now be specified for all types of
+	    action. Messages are delivered to the client _before_
+	    any Perforce command is executed.
+
+	#152344 (Bug #29019) ****
+	    The P4Broker now logs the completion of commands.
+
+	#152342 (Bug #29018) ****
+	    The P4Broker now permits clients older than 2007.2 to execute
+	    commands when no alternate servers are defined. Configurations 
+	    involving alternate servers require a 2007.2 or later client
+	    for correct handling of login tickets.
+
+	#143391 ****
+	    The client's current working directory is now available
+	    to filter programs.
+
+Bugs Fixed in 2008.1
+
+	#164059 (Bug #30618) ****
+	    The P4Broker did not interact correctly with the Service
+	    Manager on Windows so it could not be installed properly
+	    as a Windows service. This problem has been corrected.
+
+	#154665 (Bug #28515) ****
+	    An uninitialized variable meant that unless 'login' was 
+	    explicitly specified for altserver's, the broker may, or may
+	    not handle logins correctly for that altserver. This problem
+	    has been corrected.
+
+	#142679 (Bug #27785) ****
+	    The P4Broker could throw a 'double free' error on termination.
+	    This problem has been corrected.
+		
+	#141383 (Bug #27511) ****
+	    When the client ran any tagged command, followed at any
+	    time by an untagged 'p4 info', the broker would output
+	    the server's response in untagged format, and then add
+	    its own information in tagged format. This problem has
+	    been corrected.
+
+	#141236 (Bug #27468) ****
+	    When the P4Broker was configured to reject 'p4 info'
+	    commands, it was still sending the client information
+	    about itself. Now the P4Broker will only add its output
+	    to the server's when the command handler is configured
+	    to PASS, or REDIRECT the request.
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Bugs fixed in 2007.3
+
+	#146584 ****
+	    The broker used to add its information to the output
+	    of 'p4 info' in tagged mode, but this caused problems
+	    for P4WSAD, and has now been removed. The broker's 
+	    version information is now only displayed in the
+	    non-tagged output of 'p4 info'.
+		
+	#144524 (Bug #28082) ****
+	    When the broker is (incorrectly) placed between the client
+	    and a Perforce Proxy Server, a connection failure at the
+	    proxy could generate a message that caused problem for
+	    P4V. This problem has been corrected.
+		
+	#144523 (Bug #28080) ****
+	    On Windows, the Broker could hang when attempting to lock
+	    its logfile. This problem has been corrected.
+
+	#144522 (Bug #28081, #27511) ****
+	    On Windows platforms, tagged output was always on. This
+	    problem has been corrected.
+
+	#144374 (Bug #28020) ****
+	    If the connection to the Perforce Server failed, the 
+	    Broker was providing an error message which lacked
+	    a generic error code. This caused problems for P4V, 
+	    and has been corrected.

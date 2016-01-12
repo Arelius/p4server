@@ -1,8 +1,8 @@
 #!/bin/sh
 
-BACKUP_SOURCE=/path/to/backup
-S3BUCKET=bucket-name
-ARCHIVEPREFIX=prefix
+BACKUP_SOURCE={{ p4_root }}
+S3BUCKET={{ s3_bucket }}
+ARCHIVEPREFIX={{ server_host }}_repo_
 S3CMD=s3cmd
 TMPDIR=/tmp
 
